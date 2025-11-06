@@ -1,0 +1,72 @@
+{
+  "iterations": [
+    {
+      "version": "v1.0.0",
+      "label": "核心玩法首发",
+      "date": "2024-04-15",
+      "summary": "核心点击玩法、离线缓存与活动占位上线，满足首发要求。",
+      "status": "approved",
+      "notes": [
+        { "role": "产品经理", "outcome": "approved", "comment": "核心循环完整，付费点位预留完毕。" },
+        { "role": "玩家", "outcome": "approved", "comment": "节奏轻松，移动端表现流畅。" },
+        { "role": "技术专家", "outcome": "approved", "comment": "架构清晰，后续易于接入SDK。" }
+      ],
+      "actionItems": [
+        "继续跟进运营活动素材落地",
+        "准备版本 1.1.0 的增长实验"
+      ]
+    },
+    {
+      "version": "v1.1.0",
+      "label": "运营协作增强",
+      "date": "2024-05-12",
+      "summary": "增加玩家档案、活动倒计时与运营手册，支持跨团队协作。",
+      "status": "approved",
+      "notes": [
+        { "role": "老板", "outcome": "approved", "comment": "数据面板完整，可评估核心指标。" },
+        { "role": "运营团队", "outcome": "approved", "comment": "活动配置与分享链路顺畅。" },
+        { "role": "产品测试", "outcome": "approved", "comment": "关键路径测试通过，兼容 Safari/Android。" }
+      ],
+      "actionItems": [
+        "增加跨版本评审记录，提高透明度",
+        "补齐可视化测试勾选项"
+      ]
+    },
+    {
+      "version": "v1.2.0",
+      "label": "全角色评审闭环",
+      "date": "2024-06-18",
+      "summary": "上线版本评审看板与QA实验室，覆盖产品、设计、玩家、技术的多轮反馈。",
+      "status": "in_progress",
+      "notes": [
+        { "role": "H5设计师", "outcome": "approved", "comment": "视觉规范统一，可快速替换主题。" },
+        { "role": "插画师", "outcome": "approved", "comment": "素材导出指引明确，兼容高清屏。" },
+        { "role": "玩家", "outcome": "approved", "comment": "新增教程与反馈墙，让更新透明。" },
+        { "role": "技术专家", "outcome": "changes_requested", "comment": "建议记录QA勾选历史并持续更新测试项。" }
+      ],
+      "actionItems": [
+        "完善自动化构建校验脚本",
+        "根据专家建议扩展测试覆盖率",
+        "等待 QA 实验室达成 100% 勾选再转为通过"
+      ]
+    },
+    {
+      "version": "v2.0.0",
+      "label": "商业化验证与自动化闭环",
+      "date": "2024-07-12",
+      "summary": "上线商业化指标面板、主题与多语言切换、自动化校验与 QA 验收导出，完成 v2 目标。",
+      "status": "approved",
+      "notes": [
+        { "role": "产品经理", "outcome": "approved", "comment": "指标看板支持迭代决策与实验跟踪。" },
+        { "role": "老板", "outcome": "approved", "comment": "周报导出与 ROI 评估流程顺畅。" },
+        { "role": "首席设计师", "outcome": "approved", "comment": "多主题+多语言体验稳定，视觉规范完整。" },
+        { "role": "运营团队", "outcome": "approved", "comment": "活动校验与多语言配置节省了大量人工对齐时间。" },
+        { "role": "产品测试", "outcome": "approved", "comment": "CI 校验与 QA 报告导出满足上线标准。" }
+      ],
+      "actionItems": [
+        "对接正式埋点平台并沉淀自动报表",
+        "补充真机云自动化脚本与性能监控"
+      ]
+    }
+  ]
+}

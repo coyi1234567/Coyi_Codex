@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="nebula-dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>星云探险队 | H5 休闲经营游戏</title>
+    <meta name="description" content="一款移动端友好的H5经营+休闲点击游戏，可用于商业化推广，支持离线体验。" />
+    <meta name="theme-color" content="#091426" />
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <img src="assets/logo.svg" alt="星云探险队" class="brand__logo" />
+        <div>
+          <h1 data-i18n="brand.title">星云探险队</h1>
+          <p data-i18n="brand.subtitle">轻松点击、星际经营、可拓展的商业化骨架</p>
+        </div>
+      </div>
+      <button id="install-btn" class="primary-btn" hidden>添加到主屏</button>
+    </header>
+
+    <main>
+      <section class="panel panel--micro personalization" aria-label="个性化设置">
+        <div class="personalization__group">
+          <label for="theme-select" data-i18n="settings.themeLabel">界面主题</label>
+          <select id="theme-select">
+            <option value="nebula-dark" data-i18n="settings.theme.dark">星云夜航</option>
+            <option value="aurora-light" data-i18n="settings.theme.light">极光晨曦</option>
+            <option value="solstice-festival" data-i18n="settings.theme.festival">星河庆典</option>
+          </select>
+        </div>
+        <div class="personalization__group">
+          <label for="locale-select" data-i18n="settings.localeLabel">界面语言</label>
+          <select id="locale-select">
+            <option value="zh-CN">简体中文</option>
+            <option value="en-US">English</option>
+          </select>
+        </div>
+        <div class="personalization__hint" data-i18n="settings.hint">
+          设置将保存在本地，跨设备访问请在玩家档案中同步。
+        </div>
+      </section>
+
+      <section class="game-wrapper">
+        <div class="hud">
+          <div>
+            <span class="hud__label" data-i18n="hud.score">得分</span>
+            <strong id="score">0</strong>
+          </div>
+          <div>
+            <span class="hud__label" data-i18n="hud.best">最佳</span>
+            <strong id="best-score">0</strong>
+          </div>
+          <div>
+            <span class="hud__label" data-i18n="hud.energy">能量</span>
+            <strong id="energy">100</strong>
+          </div>
+          <div>
+            <span class="hud__label" data-i18n="hud.time">时间</span>
+            <strong id="time">60s</strong>
+          </div>
+          <div>
+            <span class="hud__label" data-i18n="hud.stage">阶段</span>
+            <strong id="stage">1</strong>
+          </div>
+        </div>
+
+        <div id="game-area" class="game-area" role="button" aria-label="点击捕获星球资源"></div>
+
+        <div class="controls">
+          <button id="start-btn" class="primary-btn" data-i18n="actions.start">开始探险</button>
+          <button id="pause-btn" class="secondary-btn" disabled data-i18n="actions.pause">暂停</button>
+          <button id="boost-btn" class="secondary-btn" disabled data-i18n="actions.boost">能量加速</button>
+          <button id="handbook-btn" class="ghost-btn" data-i18n="actions.handbook">作战手册</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-live="polite">
+        <h2 data-i18n="panel.overview.title">商业化与版本规划</h2>
+        <p data-i18n="panel.overview.desc">
+          该版本为可商用原型：支持移动端体验、埋点扩展位、广告激励位、会员系统拓展位。
+          产品经理、设计、插画、测试、运营、技术团队可在此基础上快速迭代。
+        </p>
+        <ul class="roles">
+          <li data-i18n="roles.pm"><strong>产品经理：</strong>提供版本目标、关卡策划、付费点位。</li>
+          <li data-i18n="roles.ceo"><strong>老板：</strong>看板实时查看核心指标，随时评估ROI。</li>
+          <li data-i18n="roles.designer"><strong>H5设计师：</strong>通过样式变量调整视觉主题。</li>
+          <li data-i18n="roles.illustrator"><strong>插画师：</strong>替换 <code>assets/</code> 中的SVG即可更新形象。</li>
+          <li data-i18n="roles.engineer"><strong>技术专家 &amp; 开发工程师：</strong>模块化脚本，方便接入小游戏SDK。</li>
+          <li data-i18n="roles.qa"><strong>产品测试：</strong>内置调试面板（控制台命令 <code>window.__nebula.debug()</code>）。</li>
+          <li data-i18n="roles.player"><strong>玩家：</strong>无需下载，扫码即玩，可添加到主屏。</li>
+          <li data-i18n="roles.ops"><strong>运营团队：</strong>配置 <code>config/campaigns.json</code>（示例）实现活动切换。</li>
+        </ul>
+        <details>
+          <summary data-i18n="panel.overview.growthTitle">增长与付费建议</summary>
+          <p data-i18n="panel.overview.growthDesc">
+            可插入激励视频广告（<code>#ad-slot</code> 占位）、开通会员订阅（<code>playerProfile.vip</code>）。
+            通过埋点 <code>analytics.track()</code> 打通用户行为漏斗。
+          </p>
+        </details>
+      </section>
+
+      <section class="panel panel--light" id="analytics-hub">
+        <header class="panel__header">
+          <h2 data-i18n="panel.analytics.title">商业化指标面板</h2>
+          <p data-i18n="panel.analytics.desc">实时洞察会员、广告与用户漏斗指标，支撑老板评估 ROI。</p>
+        </header>
+        <div class="analytics-grid" id="analytics-kpis" role="list"></div>
+        <div class="analytics-funnel">
+          <h3 data-i18n="panel.analytics.funnelTitle">用户漏斗</h3>
+          <ol id="analytics-funnel" class="analytics-funnel__list"></ol>
+        </div>
+        <div class="analytics-actions">
+          <button id="analytics-export" class="secondary-btn" data-i18n="panel.analytics.export">导出周报模板</button>
+          <span id="analytics-updated" class="analytics-updated" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <section class="panel panel--light">
+        <h2 data-i18n="panel.changelog.title">更新日志</h2>
+        <ol id="changelog">
+          <li>
+            <time>v1.0.0</time>
+            <span>首发版本：核心玩法、加速器、离线缓存、商业化预留点位。</span>
+          </li>
+          <li>
+            <time>v1.1.0</time>
+            <span>迭代玩家档案、活动倒计时与运营手册，强化多团队协作。</span>
+          </li>
+          <li>
+            <time>v1.2.0</time>
+            <span>新增版本评审看板、QA 实验室，记录多角色反馈闭环。</span>
+          </li>
+        </ol>
+        <div id="campaign-banner" class="campaign-banner" hidden>
+          <strong id="campaign-title"></strong>
+          <span id="campaign-countdown"></span>
+        </div>
+      </section>
+
+      <section class="panel" id="review-board">
+        <header class="panel__header">
+          <h2 data-i18n="panel.reviews.title">版本评审看板</h2>
+          <p data-i18n="panel.reviews.desc">
+            汇总产品经理、老板、设计、插画、测试、玩家、技术、运营等角色的意见，支持每次迭代都明确
+            <abbr title="Design Review">DR</abbr> / <abbr title="Product Review">PR</abbr> / 技术评审结果。
+          </p>
+        </header>
+        <div class="review-board__legend" aria-hidden="true">
+          <span class="status-badge status-badge--approved">通过</span>
+          <span class="status-badge status-badge--pending">待确认</span>
+          <span class="status-badge status-badge--changes">需改进</span>
+        </div>
+        <div class="review-board__layout">
+          <div id="review-timeline" class="review-timeline" role="list" aria-live="polite"></div>
+          <aside id="review-detail" class="review-detail" aria-live="polite">
+            <p>加载中… 如未自动加载，可刷新页面或检查 <code>config/reviews.json</code>。</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel panel--light" id="qa-lab">
+        <header class="panel__header">
+          <h2 data-i18n="panel.qa.title">QA 实验室</h2>
+          <p data-i18n="panel.qa.desc">开发工程师与产品测试协同验证关键路径，记录自测历史，满足技术专家的闭环要求。</p>
+        </header>
+        <div class="qa-progress">
+          <progress id="qa-progress" max="100" value="0" aria-describedby="qa-progress-label"></progress>
+          <span id="qa-progress-label">测试完成度 0%</span>
+        </div>
+        <ul id="qa-checklist" class="qa-checklist"></ul>
+        <div class="qa-actions">
+          <button type="button" id="qa-reset" class="ghost-btn" data-i18n="panel.qa.reset">重置测试记录</button>
+          <button type="button" id="qa-simulate" class="secondary-btn" data-i18n="panel.qa.simulate">记录一次冒烟测试</button>
+          <button type="button" id="qa-export" class="ghost-btn" data-i18n="panel.qa.export">导出验收报告</button>
+        </div>
+      </section>
+
+      <section class="panel" id="ops-validation">
+        <header class="panel__header">
+          <h2 data-i18n="panel.validation.title">活动素材与多语言校验</h2>
+          <p data-i18n="panel.validation.desc">自动检测活动配置、文案长度、倒计时是否合规，并同步运营任务。</p>
+        </header>
+        <ul id="validation-list" class="validation-list"></ul>
+        <div class="validation-actions">
+          <button id="validation-refresh" class="ghost-btn" data-i18n="panel.validation.refresh">重新校验</button>
+          <span id="validation-summary" class="validation-summary" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <section class="panel panel--light" id="experiments-lab">
+        <header class="panel__header">
+          <h2 data-i18n="panel.experiments.title">实验与营收模拟</h2>
+          <p data-i18n="panel.experiments.desc">配置 A/B 试验与 LTV 模型，产品专家与老板共同决策商业策略。</p>
+        </header>
+        <div class="experiments-layout">
+          <article>
+            <h3 data-i18n="panel.experiments.abTitle">A/B 试验队列</h3>
+            <ul id="experiment-list" class="experiment-list"></ul>
+          </article>
+          <article>
+            <h3 data-i18n="panel.experiments.ltvTitle">营收模拟结果</h3>
+            <table class="ltv-table">
+              <thead>
+                <tr>
+                  <th data-i18n="panel.experiments.segment">用户分层</th>
+                  <th data-i18n="panel.experiments.arpu">ARPU</th>
+                  <th data-i18n="panel.experiments.ltv">LTV(30d)</th>
+                  <th data-i18n="panel.experiments.confidence">置信度</th>
+                </tr>
+              </thead>
+              <tbody id="ltv-table-body"></tbody>
+            </table>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel panel--grid" id="ops-handbook">
+        <header class="panel__header">
+          <h2 data-i18n="panel.ops.title">运营与发布手册</h2>
+          <p data-i18n="panel.ops.desc">涵盖部署、活动、分析、客服四大流程，支持团队端到端上线。</p>
+        </header>
+        <article>
+          <h3 data-i18n="panel.ops.deploy">自动部署</h3>
+          <ol>
+            <li data-i18n="panel.ops.deployStep1">Fork/拉取代码后运行 <code>npm install</code>。</li>
+            <li data-i18n="panel.ops.deployStep2">执行 <code>npm run build</code> 生成 <code>dist/</code> 静态文件。</li>
+            <li data-i18n="panel.ops.deployStep3">使用 <code>npm run preview</code> 验证产物或将 dist 上传至任意静态空间。</li>
+            <li data-i18n="panel.ops.deployStep4">如需 CI，可使用 <code>.github/workflows/deploy.yml</code>（模板）接入 Github Pages、阿里云OSS等。</li>
+          </ol>
+        </article>
+        <article>
+          <h3 data-i18n="panel.ops.campaigns">运营活动</h3>
+          <p data-i18n="panel.ops.campaignsDesc">维护 <code>config/campaigns.json</code> 可配置活动主题、倒计时与奖励信息，脚本会自动读取。</p>
+        </article>
+        <article>
+          <h3 data-i18n="panel.ops.analytics">数据分析</h3>
+          <p data-i18n="panel.ops.analyticsDesc">通过 <code>analytics.track</code> 钩子接入 GrowingIO、神策或自建埋点服务。</p>
+        </article>
+        <article>
+          <h3 data-i18n="panel.ops.support">客服支持</h3>
+          <p data-i18n="panel.ops.supportDesc">使用 <code>window.__nebula.debug()</code> 导出实时状态，定位玩家反馈问题。</p>
+        </article>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer__links">
+        <a href="#" id="share-btn" data-i18n="footer.share">分享给好友</a>
+        <span id="ad-slot" aria-hidden="true" data-i18n="footer.ad">广告位招租</span>
+      </div>
+      <small data-i18n="footer.copy">©2024 Nebula Studio. Ready for launch.</small>
+    </footer>
+
+    <dialog id="handbook-dialog" class="handbook-dialog">
+      <form method="dialog" class="handbook-dialog__body">
+        <header>
+          <h2 data-i18n="handbook.title">星云探险队 · 快速上手</h2>
+        </header>
+        <ol>
+          <li data-i18n="handbook.step1">输入昵称开启旅程，系统会记录最佳成绩。</li>
+          <li data-i18n="handbook.step2">点击降落的能源即可获得分数，注意能量维持。</li>
+          <li data-i18n="handbook.step3">能量条低时使用加速器，危险物体会扣减能量。</li>
+          <li data-i18n="handbook.step4">完成阶段后可在运营后台触发活动皮肤。</li>
+        </ol>
+        <div class="handbook-dialog__actions">
+          <button value="cancel" class="ghost-btn" data-i18n="handbook.close">关闭</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="onboarding-dialog" class="handbook-dialog" data-onboarding>
+      <form method="dialog" class="handbook-dialog__body" id="onboarding-form">
+        <header>
+          <h2 data-i18n="onboarding.title">指挥官，欢迎来到星云探险队！</h2>
+          <p data-i18n="onboarding.desc">请设置您的代号，系统会为您保存记录。</p>
+        </header>
+        <label class="input-field">
+          <span data-i18n="onboarding.nameLabel">玩家昵称</span>
+          <input type="text" id="player-name" name="player-name" maxlength="16" placeholder="如：Nova" data-i18n-placeholder="onboarding.namePlaceholder" autocomplete="nickname" required />
+        </label>
+        <label class="input-field">
+          <span data-i18n="onboarding.hapticsLabel">是否开启震动反馈</span>
+          <select id="haptics" name="haptics">
+            <option value="auto" data-i18n="onboarding.hapticsAuto">自动检测</option>
+            <option value="on" data-i18n="onboarding.hapticsOn">开启</option>
+            <option value="off" data-i18n="onboarding.hapticsOff">关闭</option>
+          </select>
+        </label>
+        <div class="handbook-dialog__actions">
+          <button value="cancel" class="ghost-btn" data-i18n="onboarding.skip">稍后再说</button>
+          <button value="confirm" class="primary-btn" data-i18n="onboarding.save">保存设置</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="script.js" type="module"></script>
+  </body>
+</html>

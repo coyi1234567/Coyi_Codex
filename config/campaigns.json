@@ -1,0 +1,57 @@
+{
+  "campaigns": [
+    {
+      "id": "launch",
+      "title": "星际首发季",
+      "message": "邀请好友加入探险队，双方获得30点能量。",
+      "startAt": "2024-06-01T00:00:00+08:00",
+      "endAt": "2026-12-31T23:59:59+08:00",
+      "cta": "立即分享",
+      "reward": 30,
+      "locales": {
+        "en-US": {
+          "title": "Interstellar Launch Week",
+          "message": "Invite friends to join the squad and both earn +30 energy.",
+          "cta": "Share now"
+        }
+      },
+      "nextStep": {
+        "zh-CN": "同步渠道投放海报，绑定邀请码统计。",
+        "en-US": "Upload co-branded poster and bind invite codes in CRM."
+      }
+    },
+    {
+      "id": "vip",
+      "title": "星钻会员月卡",
+      "message": "加速器冷却缩短50%，尊享专属舰徽。",
+      "startAt": "2024-07-01T00:00:00+08:00",
+      "endAt": "2026-09-30T23:59:59+08:00",
+      "cta": "立即升级",
+      "price": 30,
+      "currency": "CNY",
+      "locales": {
+        "en-US": {
+          "title": "Nebula VIP Monthly Pass",
+          "message": "50% faster cooldown plus exclusive flagship badge.",
+          "cta": "Upgrade now"
+        }
+      },
+      "nextStep": {
+        "zh-CN": "确认支付链路已联调，准备节日皮肤A/B脚本。",
+        "en-US": "Verify payment integration and prep holiday skin A/B scripts."
+      }
+    }
+  ],
+  "fallback": {
+    "title": "常驻补给站",
+    "message": "每日登录领取额外能量补给。",
+    "cta": "立即签到",
+    "locales": {
+      "en-US": {
+        "title": "Daily Supply Hub",
+        "message": "Log in every day to claim bonus energy.",
+        "cta": "Check in"
+      }
+    }
+  }
+}
