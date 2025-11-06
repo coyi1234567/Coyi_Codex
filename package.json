@@ -1,0 +1,11 @@
+{
+  "name": "nebula-expedition",
+  "version": "1.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "node tools/serve.mjs --root . --port 4173",
+    "start": "npm run dev",
+    "build": "node tools/build.mjs",
+    "preview": "node tools/serve.mjs --root dist --port 4173"
+  }
+}

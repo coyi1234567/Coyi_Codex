@@ -1,0 +1,16 @@
+{
+  "name": "星云探险队",
+  "short_name": "星云探险",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#091426",
+  "description": "星际点击经营H5游戏，支持离线体验与商业化拓展。",
+  "icons": [
+    {
+      "src": "assets/logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
