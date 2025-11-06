@@ -11,21 +11,28 @@
 - **PWA 支持**：支持离线缓存、主屏安装提示。
 - **团队协作**：面向产品经理、设计、插画、测试、运营等角色的模块化说明与运营手册。
 - **评审闭环**：内置版本评审看板与 QA 实验室，记录多角色意见与自测结果。
+- **商业化指标面板**：读取 `config/metrics.json`，展示会员转化、广告 ARPU、漏斗转化，并支持 Markdown 周报导出。
+- **主题与多语言**：`data-theme` 三套主题（夜航/晨曦/庆典）与中英双语切换，面向品牌演示与出海场景。
+- **自动化校验**：活动与 i18n 校验脚本、QA 验收 JSON 导出、CI 命令 `npm run test` / `npm run ci`，保障上线质量。
 
 ## 🧩 代码结构
 
 ```
 .
-├── index.html          # 页面结构、角色说明、增长建议
-├── styles.css          # 主题样式（支持变量调整）
-├── script.js           # 游戏逻辑、玩家档案、活动 Banner、PWA 与埋点钩子
-├── manifest.json       # PWA 清单
-├── sw.js               # Service Worker，提供离线支持
+├── index.html             # 页面结构、角色说明、增长建议、分析面板
+├── styles.css             # 主题样式（支持变量调整、节日皮肤）
+├── script.js              # 游戏逻辑、玩家档案、活动 Banner、指标面板、校验逻辑
+├── manifest.json          # PWA 清单
+├── sw.js                  # Service Worker，提供离线支持
 ├── assets/
-│   └── logo.svg        # 可由插画师替换的品牌图标
-└── config/
-    ├── campaigns.json  # 运营活动配置示例
-    └── reviews.json    # 多角色评审记录示例
+│   └── logo.svg           # 可由插画师替换的品牌图标
+├── config/
+│   ├── campaigns.json     # 运营活动配置示例（含多语言与 next step）
+│   ├── metrics.json       # 商业化指标、漏斗、实验与营收模拟数据
+│   ├── reviews.json       # 多角色评审记录示例
+│   └── i18n.json          # 中英翻译字典
+├── docs/versions/         # 版本专家总结、迭代计划与验收报告
+└── tools/                 # 构建/服务/导出/校验脚本
 ```
 
 ## 🛠️ 快速开始
@@ -45,6 +52,14 @@ npm run preview # 本地校验发布包，同样监听 4173 端口
 ```
 
 构建脚本会复制静态资源并写入 `dist/build.json`，便于持续集成记录构建时间。
+
+如需在本地或 CI 校验配置与翻译，可执行：
+
+```bash
+npm run lint    # 快速校验活动配置（文案长度、时间、语言）
+npm run test    # 校验活动 + i18n + 指标结构
+npm run ci      # 执行校验后构建 dist/
+```
 
 > 若以微信/字节等小程序形态投放，可将 `dist/` 目录整体上传，并在游戏中接入平台提供的广告、支付 SDK（可在 `analytics.track` 与 `boostEnergy` 中扩展）。
 
@@ -157,9 +172,10 @@ chmod +x tools/package-release.sh
 ## 🧪 测试与调试
 
 - 浏览器控制台执行 `window.__nebula.debug()` 获取实时状态、玩家档案、活动配置。
-- 在 `config/campaigns.json` 中维护活动列表（支持开始/结束时间），前端会自动展示倒计时 Banner。
+- 在 `config/campaigns.json` 中维护活动列表（支持开始/结束时间、多语言、运营提醒），前端会自动展示倒计时 Banner 并给出校验告警。
 - 核心游戏循环针对移动端进行了减震与性能保护（尊重 `prefers-reduced-motion`，限制并发实体数量）。如需扩展，可迁移至 Canvas/WebGL 或引入物理引擎。
-- QA 实验室会将勾选结果保存在本地存储（`nebula-expedition-qa`），点击“重置测试记录”即可重新评估；“记录一次冒烟测试”会同步打点并记录时间。
+- QA 实验室会将勾选结果保存在本地存储（`nebula-expedition-qa`），点击“重置测试记录”即可重新评估；“记录一次冒烟测试”会同步打点并记录时间；“导出验收报告”会生成 JSON，方便提给缺陷平台。
+- `tools/validate-campaigns.mjs`、`tools/run-ci.mjs` 支持离线校验活动、i18n、指标结构，可在 CI 任务或本地预检中复用。
 
 ## 📋 评审闭环与自测流程
 

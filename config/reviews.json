@@ -49,6 +49,24 @@
         "根据专家建议扩展测试覆盖率",
         "等待 QA 实验室达成 100% 勾选再转为通过"
       ]
+    },
+    {
+      "version": "v2.0.0",
+      "label": "商业化验证与自动化闭环",
+      "date": "2024-07-12",
+      "summary": "上线商业化指标面板、主题与多语言切换、自动化校验与 QA 验收导出，完成 v2 目标。",
+      "status": "approved",
+      "notes": [
+        { "role": "产品经理", "outcome": "approved", "comment": "指标看板支持迭代决策与实验跟踪。" },
+        { "role": "老板", "outcome": "approved", "comment": "周报导出与 ROI 评估流程顺畅。" },
+        { "role": "首席设计师", "outcome": "approved", "comment": "多主题+多语言体验稳定，视觉规范完整。" },
+        { "role": "运营团队", "outcome": "approved", "comment": "活动校验与多语言配置节省了大量人工对齐时间。" },
+        { "role": "产品测试", "outcome": "approved", "comment": "CI 校验与 QA 报告导出满足上线标准。" }
+      ],
+      "actionItems": [
+        "对接正式埋点平台并沉淀自动报表",
+        "补充真机云自动化脚本与性能监控"
+      ]
     }
   ]
 }

@@ -27,6 +27,18 @@ const selectors = {
   qaProgressLabel: document.getElementById("qa-progress-label"),
   qaReset: document.getElementById("qa-reset"),
   qaSimulate: document.getElementById("qa-simulate"),
+  qaExport: document.getElementById("qa-export"),
+  themeSelect: document.getElementById("theme-select"),
+  localeSelect: document.getElementById("locale-select"),
+  analyticsKPIs: document.getElementById("analytics-kpis"),
+  analyticsFunnel: document.getElementById("analytics-funnel"),
+  analyticsExport: document.getElementById("analytics-export"),
+  analyticsUpdated: document.getElementById("analytics-updated"),
+  experimentList: document.getElementById("experiment-list"),
+  ltvTableBody: document.getElementById("ltv-table-body"),
+  validationList: document.getElementById("validation-list"),
+  validationSummary: document.getElementById("validation-summary"),
+  validationRefresh: document.getElementById("validation-refresh"),
 };
 
 const supportsDialog = typeof HTMLDialogElement !== "undefined";
@@ -35,12 +47,24 @@ const reduceMotionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)"
 
 const STORAGE_KEY = "nebula-expedition-profile";
 const QA_STORAGE_KEY = "nebula-expedition-qa";
+const PREFERENCES_KEY = "nebula-expedition-preferences";
+const I18N_FALLBACK = "zh-CN";
 const defaultProfile = {
   name: "指挥官",
   bestScore: 0,
   sessions: 0,
   haptics: "auto",
   lastSessionAt: null,
+};
+const defaultPreferences = {
+  theme: "nebula-dark",
+  locale: "zh-CN",
+};
+
+const THEME_META_COLORS = {
+  "nebula-dark": "#091426",
+  "aurora-light": "#eff6ff",
+  "solstice-festival": "#3b0764",
 };
 
 const QA_SCENARIOS = [
@@ -143,6 +167,26 @@ function saveQAState() {
   }
 }
 
+function loadPreferences() {
+  try {
+    const raw = localStorage.getItem(PREFERENCES_KEY);
+    if (!raw) return { ...defaultPreferences };
+    const parsed = JSON.parse(raw);
+    return { ...defaultPreferences, ...parsed };
+  } catch (error) {
+    console.warn("preferences load failed", error);
+    return { ...defaultPreferences };
+  }
+}
+
+function savePreferences() {
+  try {
+    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(state.preferences));
+  } catch (error) {
+    console.warn("preferences save failed", error);
+  }
+}
+
 const spawnConfig = {
   baseInterval: 1200,
   resourceChance: 0.72,
@@ -170,15 +214,162 @@ const state = {
   reviewIterations: [],
   reviewSelection: null,
   qa: loadQAState(),
+  preferences: loadPreferences(),
+  localeCatalog: {},
+  analyticsDataset: null,
+  experiments: [],
+  ltvSegments: [],
+  validationResults: [],
 };
 
 let audioCtx;
 
 const analytics = {
+  history: [],
   track(event, payload = {}) {
+    const entry = {
+      event,
+      payload,
+      timestamp: new Date().toISOString(),
+    };
+    this.history.push(entry);
     console.info("[analytics]", event, payload);
   },
 };
+
+function formatTemplate(template, context = {}) {
+  if (typeof template !== "string") return template;
+  return template.replace(/{{\s*(\w+)\s*}}/g, (match, token) => {
+    return token in context ? context[token] : match;
+  });
+}
+
+function t(key, fallback = "") {
+  const locale = state.preferences.locale || I18N_FALLBACK;
+  const catalog = state.localeCatalog?.[locale] || {};
+  const fallbackCatalog = state.localeCatalog?.[I18N_FALLBACK] || {};
+  return catalog[key] ?? fallbackCatalog[key] ?? fallback ?? key;
+}
+
+function applyTheme(theme, { track = true } = {}) {
+  state.preferences.theme = theme;
+  document.documentElement.dataset.theme = theme;
+  const themeColor = THEME_META_COLORS[theme] || THEME_META_COLORS[defaultPreferences.theme];
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) {
+    themeMeta.setAttribute("content", themeColor);
+  }
+  if (selectors.themeSelect) {
+    selectors.themeSelect.value = theme;
+  }
+  savePreferences();
+  if (track) {
+    analytics.track("preference_theme", { theme });
+  }
+}
+
+function applyLocale(locale, { track = true } = {}) {
+  state.preferences.locale = locale;
+  if (selectors.localeSelect) {
+    selectors.localeSelect.value = locale;
+  }
+  savePreferences();
+  applyTranslations();
+  renderAnalyticsBoard();
+  if (state.validationResults.length) {
+    renderValidationResults(state.validationResults);
+  }
+  if (track) {
+    analytics.track("preference_locale", { locale });
+  }
+}
+
+function applyTranslations() {
+  const context = { player: state.profile.name };
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    const key = element.dataset.i18n;
+    if (!key) return;
+    const translation = formatTemplate(t(key, element.textContent?.trim()), context);
+    if (translation) {
+      element.textContent = translation;
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    if (!(element instanceof HTMLElement)) return;
+    const key = element.dataset.i18nPlaceholder;
+    if (!key) return;
+    const translation = formatTemplate(t(key, element.getAttribute("placeholder") || ""), context);
+    if (translation && "placeholder" in element) {
+      element.setAttribute("placeholder", translation);
+    }
+  });
+
+  if (selectors.pause) {
+    selectors.pause.textContent = state.paused ? t("actions.resume", "继续") : t("actions.pause", "暂停");
+  }
+  if (selectors.start) {
+    selectors.start.textContent = t("actions.start", selectors.start.textContent);
+  }
+  if (selectors.boost) {
+    selectors.boost.textContent = t("actions.boost", selectors.boost.textContent);
+  }
+  if (selectors.handbook) {
+    selectors.handbook.textContent = t("actions.handbook", selectors.handbook.textContent);
+  }
+  const titleTemplate = t("meta.title", `星云探险队｜${state.profile.name}的指挥平台`);
+  document.title = formatTemplate(titleTemplate, context);
+}
+
+function resolveLocaleString(value) {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const locale = state.preferences.locale || I18N_FALLBACK;
+    return value[locale] ?? value[I18N_FALLBACK] ?? Object.values(value)[0] ?? "";
+  }
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+function resolveCampaignField(campaign, field) {
+  const base = campaign[field];
+  const locales = campaign.locales;
+  if (locales && typeof locales === "object") {
+    const map = { [I18N_FALLBACK]: base };
+    Object.entries(locales).forEach(([locale, values]) => {
+      if (values && typeof values === "object" && values[field]) {
+        map[locale] = values[field];
+      }
+    });
+    return resolveLocaleString(map);
+  }
+  return base;
+}
+
+function formatNumber(value, options = {}) {
+  const numeric = Number(value ?? 0);
+  if (Number.isNaN(numeric)) return "0";
+  const formatter = new Intl.NumberFormat(state.preferences.locale || I18N_FALLBACK, options);
+  return formatter.format(numeric);
+}
+
+function formatPercent(value, precision = 1) {
+  const numeric = Number(value ?? 0);
+  if (Number.isNaN(numeric)) return "0%";
+  return `${(numeric * 100).toFixed(precision)}%`;
+}
+
+function formatDelta(delta, type) {
+  if (delta === null || delta === undefined) return null;
+  const numeric = Number(delta);
+  if (Number.isNaN(numeric)) return null;
+  const sign = numeric > 0 ? "+" : numeric < 0 ? "-" : "±";
+  const absolute = Math.abs(numeric);
+  if (type === "percentage") {
+    return `${sign}${(absolute * 100).toFixed(1)}%`;
+  }
+  return `${sign}${formatNumber(absolute, { maximumFractionDigits: 2 })}`;
+}
 
 if (reduceMotionQuery) {
   reduceMotionQuery.addEventListener("change", (event) => {
@@ -196,7 +387,7 @@ function updateProfileUI() {
   if (selectors.haptics) {
     selectors.haptics.value = state.profile.haptics;
   }
-  document.title = `星云探险队｜${state.profile.name}的指挥平台`;
+  applyTranslations();
 }
 
 function applyProfileUpdate(partial) {
@@ -238,6 +429,18 @@ function collectOnboardingForm() {
   analytics.track("profile_update", { name, haptics });
 }
 
+async function loadI18nCatalog() {
+  try {
+    const response = await fetch("config/i18n.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    state.localeCatalog = data?.locales || {};
+  } catch (error) {
+    console.warn("i18n load failed", error);
+    state.localeCatalog = { [I18N_FALLBACK]: {} };
+  }
+}
+
 function openDialog(dialog) {
   if (!dialog) return;
   if (supportsDialog && dialog.showModal) {
@@ -269,7 +472,7 @@ function adjustEnergy(value) {
   state.energy = Math.min(150, Math.max(0, state.energy + value));
   selectors.energy.textContent = state.energy.toString();
   if (state.energy <= 0) {
-    endGame("能量耗尽，探险终止。");
+    endGame(t("messages.energyEmpty", "能量耗尽，探险终止。"));
   }
 }
 
@@ -427,7 +630,7 @@ function countdown() {
     }
 
     if (state.timeLeft <= 0) {
-      endGame("恭喜完成阶段探险！");
+      endGame(t("messages.stageComplete", "恭喜完成阶段探险！"));
     }
   }, 1000);
 }
@@ -477,7 +680,7 @@ function startGame() {
 function pauseGame() {
   if (!state.running) return;
   state.paused = !state.paused;
-  selectors.pause.textContent = state.paused ? "继续" : "暂停";
+  selectors.pause.textContent = state.paused ? t("actions.resume", "继续") : t("actions.pause", "暂停");
   selectors.gameArea.classList.toggle("paused", state.paused);
   analytics.track(state.paused ? "session_pause" : "session_resume", {
     player: state.profile.name,
@@ -516,15 +719,18 @@ function endGame(message) {
   selectors.pause.disabled = true;
   selectors.boost.disabled = true;
   selectors.start.disabled = false;
-  selectors.pause.textContent = "暂停";
+  selectors.pause.textContent = t("actions.pause", "暂停");
   selectors.gameArea.classList.remove("paused");
   let badge;
   if (state.score > state.profile.bestScore) {
-    badge = "刷新最佳";
+    badge = t("messages.newRecordBadge", "刷新最佳");
     applyProfileUpdate({ bestScore: state.score });
   }
-  updateChangelog(`${state.profile.name}：${message} 最终得分 ${state.score}`, badge);
-  alert(`${message} 最终得分：${state.score}`);
+  const context = { player: state.profile.name, score: state.score, message };
+  const changelogTemplate = t("messages.sessionSummary", "{{player}}：{{message}} 最终得分 {{score}}");
+  updateChangelog(formatTemplate(changelogTemplate, context), badge);
+  const alertTemplate = t("messages.sessionAlert", "{{message}} 最终得分：{{score}}");
+  alert(formatTemplate(alertTemplate, context));
 }
 
 function boostEnergy() {
@@ -640,6 +846,13 @@ function initDebugging() {
           lastSmokeAt: state.qa.lastSmokeAt,
           scenarios: QA_SCENARIOS,
         },
+        analytics: {
+          history: analytics.history.slice(-50),
+          dataset: state.analyticsDataset,
+        },
+        preferences: state.preferences,
+        validations: state.validationResults,
+        localeCatalog: state.localeCatalog,
       };
     },
   };
@@ -649,7 +862,7 @@ function formatDateLabel(dateString) {
   if (!dateString) return "--";
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return dateString;
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(state.preferences.locale || I18N_FALLBACK, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -660,7 +873,7 @@ function formatDateTimeLabel(dateString) {
   if (!dateString) return "--";
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return dateString;
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(state.preferences.locale || I18N_FALLBACK, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -934,6 +1147,39 @@ function initQALab() {
   if (selectors.qaSimulate) {
     selectors.qaSimulate.addEventListener("click", () => simulateSmokeTest());
   }
+  if (selectors.qaExport) {
+    selectors.qaExport.addEventListener("click", () => exportQAReport());
+  }
+}
+
+function exportQAReport() {
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    locale: state.preferences.locale,
+    progress: {
+      total: QA_SCENARIOS.length,
+      completed: Array.from(state.qa.completed.values()),
+      completionRate: QA_SCENARIOS.length
+        ? Number((state.qa.completed.size / QA_SCENARIOS.length).toFixed(2))
+        : 0,
+      lastSmokeAt: state.qa.lastSmokeAt,
+    },
+    scenarios: QA_SCENARIOS.map((scenario) => ({
+      id: scenario.id,
+      title: scenario.title,
+      role: scenario.role,
+      description: scenario.description,
+      completed: state.qa.completed.has(scenario.id),
+    })),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `nebula-qa-report-${Date.now()}.json`;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  analytics.track("qa_export", { scenarios: payload.progress.completed.length });
 }
 
 function formatCountdown(durationMs) {
@@ -983,8 +1229,8 @@ async function initCampaigns() {
     const chosen = active || upcoming || fallback;
     if (!chosen) return;
     selectors.campaignBanner.hidden = false;
-    const title = chosen.title || chosen.name || "活动";
-    const message = chosen.message || chosen.bannerText || "敬请期待";
+    const title = resolveCampaignField(chosen, "title") || chosen.name || "活动";
+    const message = resolveCampaignField(chosen, "message") || chosen.bannerText || "敬请期待";
     selectors.campaignTitle.textContent = `${title}｜${message}`;
     if (state.campaignTimer) {
       clearInterval(state.campaignTimer);
@@ -999,21 +1245,442 @@ async function initCampaigns() {
         state.campaignContext = { id: chosen.id || title, label };
       }
     } else {
-      selectors.campaignCountdown.textContent = chosen.cta || "立即参与";
+      selectors.campaignCountdown.textContent = resolveCampaignField(chosen, "cta") || "立即参与";
     }
   } catch (error) {
     console.warn("campaign load failed", error);
   }
 }
 
-function init() {
+function renderAnalyticsBoard() {
+  if (!selectors.analyticsKPIs) return;
+  selectors.analyticsKPIs.innerHTML = "";
+  const dataset = state.analyticsDataset;
+  if (!dataset || !Array.isArray(dataset.kpis) || !dataset.kpis.length) {
+    const empty = document.createElement("p");
+    empty.textContent = t("panel.analytics.empty", "尚无指标数据，等待埋点回传。");
+    selectors.analyticsKPIs.append(empty);
+  } else {
+    const fragment = document.createDocumentFragment();
+    dataset.kpis.forEach((kpi) => {
+      const card = document.createElement("article");
+      card.className = "analytics-card";
+      const label = document.createElement("span");
+      label.className = "analytics-card__label";
+      label.textContent = resolveLocaleString(kpi.label);
+      const value = document.createElement("span");
+      value.className = "analytics-card__value";
+      if (kpi.type === "percentage") {
+        value.textContent = formatPercent(kpi.value, kpi.precision ?? 1);
+      } else if (kpi.type === "currency") {
+        value.textContent = formatNumber(kpi.value, {
+          style: "currency",
+          currency: kpi.currency || "CNY",
+          maximumFractionDigits: 2,
+        });
+      } else {
+        value.textContent = formatNumber(kpi.value, { maximumFractionDigits: 2 });
+      }
+      card.append(label, value);
+      const delta = formatDelta(kpi.delta, kpi.type);
+      if (delta) {
+        const deltaEl = document.createElement("span");
+        deltaEl.className = "analytics-card__delta";
+        deltaEl.dataset.trend = kpi.delta > 0 ? "up" : kpi.delta < 0 ? "down" : "flat";
+        deltaEl.textContent = delta;
+        card.append(deltaEl);
+      }
+      if (kpi.note) {
+        const note = document.createElement("small");
+        note.textContent = resolveLocaleString(kpi.note);
+        note.style.color = "var(--muted)";
+        card.append(note);
+      }
+      fragment.append(card);
+    });
+    selectors.analyticsKPIs.append(fragment);
+  }
+
+  if (selectors.analyticsFunnel) {
+    selectors.analyticsFunnel.innerHTML = "";
+    if (!dataset || !Array.isArray(dataset.funnel) || !dataset.funnel.length) {
+      const empty = document.createElement("li");
+      empty.textContent = t("panel.analytics.funnelEmpty", "暂无漏斗数据");
+      selectors.analyticsFunnel.append(empty);
+    } else {
+      const fragment = document.createDocumentFragment();
+      dataset.funnel.forEach((stage) => {
+        const item = document.createElement("li");
+        item.className = "analytics-funnel__item";
+        const label = document.createElement("span");
+        label.textContent = resolveLocaleString(stage.label || stage.stage);
+        const value = document.createElement("span");
+        if (stage.type === "percentage") {
+          value.textContent = formatPercent(stage.value, stage.precision ?? 1);
+        } else {
+          value.textContent = formatNumber(stage.value, { maximumFractionDigits: 2 });
+        }
+        item.append(label, value);
+        fragment.append(item);
+      });
+      selectors.analyticsFunnel.append(fragment);
+    }
+  }
+
+  if (selectors.analyticsUpdated) {
+    if (dataset?.lastUpdated) {
+      const formatted = formatDateTimeLabel(dataset.lastUpdated);
+      const template = t("panel.analytics.updated", "更新于 {{time}}");
+      selectors.analyticsUpdated.textContent = formatTemplate(template, { time: formatted });
+    } else {
+      selectors.analyticsUpdated.textContent = "";
+    }
+  }
+
+  state.experiments = Array.isArray(dataset?.experiments) ? dataset.experiments : [];
+  state.ltvSegments = Array.isArray(dataset?.ltv) ? dataset.ltv : [];
+  renderExperimentList();
+  renderLtvTable();
+}
+
+function renderExperimentList() {
+  if (!selectors.experimentList) return;
+  selectors.experimentList.innerHTML = "";
+  if (!state.experiments.length) {
+    const empty = document.createElement("li");
+    empty.textContent = t("panel.experiments.empty", "暂无进行中的实验");
+    selectors.experimentList.append(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  state.experiments.forEach((experiment) => {
+    const card = document.createElement("li");
+    card.className = "experiment-card";
+    const title = document.createElement("strong");
+    title.textContent = resolveLocaleString(experiment.name);
+    const goal = document.createElement("p");
+    goal.textContent = `${t("panel.experiments.goal", "目标")}: ${resolveLocaleString(experiment.goal)}`;
+    const meta = document.createElement("div");
+    meta.className = "experiment-card__meta";
+    const statusLabel = t(`experiments.status.${experiment.status}`, experiment.status);
+    meta.append(
+      document.createTextNode(`${statusLabel}`),
+      document.createTextNode(` ｜ ${t("panel.experiments.traffic", "流量")}: ${formatPercent(experiment.traffic ?? 0, 0)}`)
+    );
+    if (typeof experiment.uplift === "number") {
+      meta.append(document.createTextNode(` ｜ ${t("panel.experiments.uplift", "提升")}: ${formatPercent(experiment.uplift, 1)}`));
+    }
+    card.append(title, goal, meta);
+    if (experiment.nextStep) {
+      const next = document.createElement("small");
+      next.textContent = `${t("panel.experiments.next", "下一步")}: ${resolveLocaleString(experiment.nextStep)}`;
+      next.style.color = "var(--muted)";
+      card.append(next);
+    }
+    fragment.append(card);
+  });
+  selectors.experimentList.append(fragment);
+}
+
+function renderLtvTable() {
+  if (!selectors.ltvTableBody) return;
+  selectors.ltvTableBody.innerHTML = "";
+  if (!state.ltvSegments.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 4;
+    cell.textContent = t("panel.experiments.ltvEmpty", "暂无营收模型数据");
+    row.append(cell);
+    selectors.ltvTableBody.append(row);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  state.ltvSegments.forEach((segment) => {
+    const row = document.createElement("tr");
+    const segmentCell = document.createElement("td");
+    segmentCell.textContent = resolveLocaleString(segment.name || segment.segment);
+    const arpuCell = document.createElement("td");
+    arpuCell.textContent = formatNumber(segment.arpu, {
+      style: "currency",
+      currency: segment.currency || "CNY",
+      maximumFractionDigits: 2,
+    });
+    const ltvCell = document.createElement("td");
+    ltvCell.textContent = formatNumber(segment.ltv, {
+      style: "currency",
+      currency: segment.currency || "CNY",
+      maximumFractionDigits: 2,
+    });
+    const confidenceCell = document.createElement("td");
+    confidenceCell.textContent = formatPercent(segment.confidence ?? 0, 0);
+    if (segment.trend) {
+      confidenceCell.dataset.trend = segment.trend;
+    }
+    row.append(segmentCell, arpuCell, ltvCell, confidenceCell);
+    fragment.append(row);
+  });
+  selectors.ltvTableBody.append(fragment);
+}
+
+async function loadAnalyticsDataset() {
+  if (!selectors.analyticsKPIs) return;
+  try {
+    const response = await fetch("config/metrics.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    state.analyticsDataset = data;
+    renderAnalyticsBoard();
+  } catch (error) {
+    console.warn("analytics load failed", error);
+    state.analyticsDataset = null;
+    if (selectors.analyticsKPIs) {
+      selectors.analyticsKPIs.innerHTML = "";
+      const message = document.createElement("p");
+      message.textContent = t("panel.analytics.error", "无法加载指标数据，请稍后重试。");
+      selectors.analyticsKPIs.append(message);
+    }
+  }
+}
+
+function exportAnalyticsReport() {
+  if (!state.analyticsDataset) return;
+  const dataset = state.analyticsDataset;
+  const lines = [
+    `# ${t("report.title", "星云探险队商业化周报")}`,
+    `- ${t("report.generatedAt", "生成时间")}: ${new Date().toISOString()}`,
+  ];
+  if (dataset.lastUpdated) {
+    lines.push(`- ${t("report.dataUpdated", "数据更新时间")}: ${dataset.lastUpdated}`);
+  }
+  lines.push("\n## KPI");
+  (dataset.kpis || []).forEach((kpi) => {
+    const label = resolveLocaleString(kpi.label);
+    let value;
+    if (kpi.type === "percentage") {
+      value = formatPercent(kpi.value, kpi.precision ?? 1);
+    } else if (kpi.type === "currency") {
+      value = formatNumber(kpi.value, {
+        style: "currency",
+        currency: kpi.currency || "CNY",
+        maximumFractionDigits: 2,
+      });
+    } else {
+      value = formatNumber(kpi.value, { maximumFractionDigits: 2 });
+    }
+    const delta = formatDelta(kpi.delta, kpi.type);
+    lines.push(`- ${label}: ${value}${delta ? ` (${delta})` : ""}`);
+  });
+
+  lines.push("\n## Funnel");
+  (dataset.funnel || []).forEach((stage) => {
+    const label = resolveLocaleString(stage.label || stage.stage);
+    const value = stage.type === "percentage"
+      ? formatPercent(stage.value, stage.precision ?? 1)
+      : formatNumber(stage.value, { maximumFractionDigits: 2 });
+    lines.push(`- ${label}: ${value}`);
+  });
+
+  lines.push("\n## Experiments");
+  if (!state.experiments.length) {
+    lines.push(`- ${t("panel.experiments.empty", "暂无进行中的实验")}`);
+  } else {
+    state.experiments.forEach((experiment) => {
+      const name = resolveLocaleString(experiment.name);
+      const status = t(`experiments.status.${experiment.status}`, experiment.status);
+      const uplift = typeof experiment.uplift === "number" ? formatPercent(experiment.uplift, 1) : "--";
+      lines.push(`- ${name} (${status}) → uplift ${uplift}`);
+    });
+  }
+
+  lines.push("\n## LTV Segments");
+  if (!state.ltvSegments.length) {
+    lines.push(`- ${t("panel.experiments.ltvEmpty", "暂无营收模型数据")}`);
+  } else {
+    state.ltvSegments.forEach((segment) => {
+      const name = resolveLocaleString(segment.name || segment.segment);
+      const arpu = formatNumber(segment.arpu, {
+        style: "currency",
+        currency: segment.currency || "CNY",
+        maximumFractionDigits: 2,
+      });
+      const ltv = formatNumber(segment.ltv, {
+        style: "currency",
+        currency: segment.currency || "CNY",
+        maximumFractionDigits: 2,
+      });
+      lines.push(`- ${name}: ARPU ${arpu} / LTV ${ltv}`);
+    });
+  }
+
+  const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `nebula-analytics-report-${Date.now()}.md`;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  analytics.track("analytics_export", { items: dataset.kpis?.length ?? 0 });
+}
+
+function renderValidationResults(results) {
+  if (!selectors.validationList) return;
+  selectors.validationList.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+  results.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "validation-item";
+    const title = document.createElement("strong");
+    title.textContent = item.title;
+    const status = document.createElement("span");
+    status.className = "validation-item__status";
+    status.dataset.status = item.status;
+    const statusKey = `validation.status.${item.status}`;
+    status.textContent = t(statusKey, item.status);
+    const detail = document.createElement("p");
+    detail.textContent = item.detail;
+    li.append(title, status, detail);
+    if (item.suggestion) {
+      const suggestion = document.createElement("small");
+      suggestion.style.color = "var(--muted)";
+      suggestion.textContent = item.suggestion;
+      li.append(suggestion);
+    }
+    fragment.append(li);
+  });
+  selectors.validationList.append(fragment);
+
+  if (selectors.validationSummary) {
+    const total = results.length;
+    const warnings = results.filter((item) => item.status === "warning").length;
+    const errors = results.filter((item) => item.status === "error").length;
+    const template = t(
+      "validation.summary",
+      "共 {{total}} 项校验 ｜ 警告 {{warnings}} ｜ 阻断 {{errors}}"
+    );
+    selectors.validationSummary.textContent = formatTemplate(template, { total, warnings, errors });
+  }
+}
+
+async function runValidationChecks() {
+  if (!selectors.validationList) return;
+  const results = [];
+  try {
+    const response = await fetch("config/campaigns.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const campaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
+    const now = Date.now();
+    campaigns.forEach((campaign) => {
+      const title = resolveLocaleString(campaign.title || campaign.name || campaign.id || "Campaign");
+      const start = campaign.startAt ? new Date(campaign.startAt).getTime() : null;
+      const end = campaign.endAt ? new Date(campaign.endAt).getTime() : null;
+      let status = "ok";
+      const issues = [];
+      if (end && end < now) {
+        status = "warning";
+        issues.push(t("validation.campaign.ended", "活动已过期，建议下架或更新。"));
+      }
+      if (start && start > now && start - now < 3 * 24 * 60 * 60 * 1000) {
+        if (status !== "error") status = "warning";
+        issues.push(t("validation.campaign.upcoming", "活动即将开始，请提前预热。"));
+      }
+      const message = resolveCampaignField(campaign, "message") || "";
+      if (message.length > 60) {
+        if (status !== "error") status = "warning";
+        issues.push(t("validation.campaign.length", "文案超过 60 字，请精简以适配推送位。"));
+      }
+      const locales = campaign.locales;
+      if (locales && typeof locales === "object") {
+        const requiredLocale = state.preferences.locale;
+        if (!locales[requiredLocale]) {
+          status = "warning";
+          issues.push(t("validation.campaign.locale", "缺少当前语言的文案，已回退到默认。"));
+        }
+      }
+      results.push({
+        title: `${t("validation.campaign.title", "活动")}: ${title}`,
+        status,
+        detail: issues.join(" ｜ ") || t("validation.campaign.ok", "配置正常"),
+        suggestion: campaign.nextStep ? resolveLocaleString(campaign.nextStep) : undefined,
+      });
+    });
+  } catch (error) {
+    console.warn("campaign validation failed", error);
+    results.push({
+      title: t("validation.campaign.fetchTitle", "活动配置"),
+      status: "error",
+      detail: t("validation.campaign.fetchError", "无法读取活动配置，请检查网络或 JSON 格式。"),
+    });
+  }
+
+  const locales = Object.keys(state.localeCatalog || {});
+  if (locales.length) {
+    const trackedKeys = new Set();
+    document.querySelectorAll("[data-i18n]").forEach((element) => {
+      if (element.dataset.i18n) trackedKeys.add(element.dataset.i18n);
+    });
+    locales.forEach((locale) => {
+      const missing = Array.from(trackedKeys).filter((key) => {
+        const catalog = state.localeCatalog?.[locale] || {};
+        return catalog[key] === undefined;
+      });
+      if (missing.length) {
+        results.push({
+          title: `${t("validation.locale.title", "语言包")}: ${locale}`,
+          status: locale === I18N_FALLBACK ? "error" : "warning",
+          detail: formatTemplate(t("validation.locale.missing", "缺少 {{count}} 条翻译"), { count: missing.length }),
+          suggestion: `${t("validation.locale.suggestion", "补齐以下键值")}: ${missing
+            .slice(0, 5)
+            .join(", ")}${missing.length > 5 ? "…" : ""}`,
+        });
+      }
+    });
+  }
+
+  state.validationResults = results;
+  renderValidationResults(results);
+  analytics.track("ops_validation", {
+    total: results.length,
+    warnings: results.filter((item) => item.status === "warning").length,
+    errors: results.filter((item) => item.status === "error").length,
+  });
+}
+
+function initPreferenceControls() {
+  if (selectors.themeSelect) {
+    selectors.themeSelect.addEventListener("change", (event) => {
+      if (!(event.target instanceof HTMLSelectElement)) return;
+      applyTheme(event.target.value);
+    });
+  }
+  if (selectors.localeSelect) {
+    selectors.localeSelect.addEventListener("change", (event) => {
+      if (!(event.target instanceof HTMLSelectElement)) return;
+      applyLocale(event.target.value);
+    });
+  }
+  if (selectors.analyticsExport) {
+    selectors.analyticsExport.addEventListener("click", () => exportAnalyticsReport());
+  }
+  if (selectors.validationRefresh) {
+    selectors.validationRefresh.addEventListener("click", () => runValidationChecks());
+  }
+}
+
+async function init() {
+  applyTheme(state.preferences.theme, { track: false });
+  await loadI18nCatalog();
+  applyLocale(state.preferences.locale, { track: false });
   updateProfileUI();
+  initPreferenceControls();
   ensureOnboarding();
   initServiceWorker();
   initDebugging();
   initCampaigns();
   initReviewBoard();
   initQALab();
+  await loadAnalyticsDataset();
+  await runValidationChecks();
   analytics.track("app_loaded", { player: state.profile.name });
 }
 
@@ -1023,4 +1690,6 @@ window.addEventListener("visibilitychange", () => {
   }
 });
 
-init();
+init().catch((error) => {
+  console.error("init failed", error);
+});
