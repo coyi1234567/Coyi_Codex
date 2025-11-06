@@ -3,7 +3,9 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT_DIR="${PROJECT_ROOT}/sync-output"
-BUNDLE_PATH="${OUTPUT_DIR}/coyi-codex.bundle"
+DEFAULT_BUNDLE_NAME="coyi-codex.bundle"
+BUNDLE_NAME="${1:-$DEFAULT_BUNDLE_NAME}"
+BUNDLE_PATH="${OUTPUT_DIR}/${BUNDLE_NAME}"
 
 cd "$PROJECT_ROOT"
 
@@ -19,10 +21,10 @@ git bundle create "$BUNDLE_PATH" HEAD
 echo "Bundle created at: $BUNDLE_PATH"
 echo
 cat <<'USAGE'
-Next steps:
-  1. Download the bundle file to a network-enabled machine.
-  2. Run: git clone coyi-codex.bundle coyi-codex
-  3. cd coyi-codex
-  4. git remote add origin <git@github.com:coyi1234567/<repo>.git>
-  5. git push -u origin main (or the current branch name)
+Next steps (on a network-enabled machine):
+  1. Copy the bundle file to the target machine.
+  2. Run: git clone "${BUNDLE_NAME}" develop-a-commercial-web-game
+  3. cd develop-a-commercial-web-game
+  4. git remote add origin git@github.com:coyi1234567/develop-a-commercial-web-game.git
+  5. git push -u origin main (or whichever branch you want to publish)
 USAGE

@@ -83,16 +83,31 @@ docker run -it --rm -p 8080:80 nebula-expedition
 
    导出脚本会在 `sync-output/` 生成 `coyi-codex.bundle`，包含当前分支的完整 Git 历史。下载该文件至有网络的机器，再继续后续操作。
 
-2. **准备 GitHub 仓库**：在自己的 GitHub 账号（如 `coyi1234567`）下新建一个公开或私有仓库，例如 `nebula-expedition`。然后在可联网环境执行：
+2. **准备 GitHub 仓库**：你已在 GitHub 创建了空仓库 [`develop-a-commercial-web-game`](https://github.com/coyi1234567/develop-a-commercial-web-game)。在可联网环境将 bundle（以及 `tools/github-import.sh` 脚本）拷贝到某个目录后，可直接使用导入脚本：
 
    ```bash
-   git clone /path/to/coyi-codex.bundle nebula-expedition
-   cd nebula-expedition
-   git remote add origin git@github.com:<your-account>/nebula-expedition.git
+   # 确保脚本可执行
+   chmod +x tools/github-import.sh
+   # 默认会读取当前目录下的 coyi-codex.bundle
+   ./tools/github-import.sh /path/to/coyi-codex.bundle
+   ```
+
+   该脚本会在同级目录生成 `develop-a-commercial-web-game/` 文件夹、设置远端为 `git@github.com:coyi1234567/develop-a-commercial-web-game.git`，并推送当前分支（默认 `main`）。如需改用 HTTPS 或其它仓库，只需在命令最后追加目标地址：
+
+   ```bash
+   ./tools/github-import.sh /path/to/coyi-codex.bundle my-dir https://github.com/coyi1234567/develop-a-commercial-web-game.git
+   ```
+
+   若偏好手动操作，可执行：
+
+   ```bash
+   git clone /path/to/coyi-codex.bundle develop-a-commercial-web-game
+   cd develop-a-commercial-web-game
+   git remote add origin git@github.com:coyi1234567/develop-a-commercial-web-game.git
    git push -u origin HEAD:main
    ```
 
-   如使用 GitHub Codespaces / Desktop，可在图形界面完成同样操作，确保主分支包含本仓库文件。完成推送后，可将仓库设置为 Public 或邀请团队成员加入。
+   无论使用脚本或手动方式，都能迅速让主分支同步到你的 GitHub 仓库，方便 Vercel 继续自动化部署。
 
 3. **在 Vercel 导入项目**：访问 [Vercel Dashboard](https://vercel.com/dashboard)，点击 **Add New → Project**，选择刚刚推送的 GitHub 仓库。如果提示授权，授予 Vercel 访问该仓库的权限。
 
@@ -118,7 +133,7 @@ docker run -it --rm -p 8080:80 nebula-expedition
 ### 当前交付状态说明
 
 - **代码**：此仓库已包含可以直接 `npm run build` 的完整源码，`dist/` 目录即为对外发版资源。
-- **GitHub 仓库**：本环境无法推送到 `https://github.com/coyi1234567` 或新建远端仓库。已提供 `./tools/github-export.sh` 生成的离线包流程，请在有网络的环境运行 README 中的 `git push` 步骤完成同步。
+- **GitHub 仓库**：本环境无法直接推送到 `https://github.com/coyi1234567`。现已提供 `./tools/github-export.sh`（导出 bundle）与 `./tools/github-import.sh`（导入并推送到 `https://github.com/coyi1234567/develop-a-commercial-web-game`），只需在有网络的机器运行即可完成同步。
 - **线上部署**：由于无法访问外部平台，暂未产生可直接游玩的公网链接。请在具备网络权限的机器上登录 Vercel（或任意静态托管平台），导入刚同步的 GitHub 仓库后即可自动获得线上地址。
 - **自测结果**：可通过 `npm run preview` 在本地验证生产包，或使用提供的 Docker 镜像启动服务，确保所有角色反馈闭环再上线。
 
