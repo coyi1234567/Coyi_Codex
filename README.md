@@ -128,6 +128,21 @@ docker run -it --rm -p 8080:80 nebula-expedition
 
 7. **自测清单**：部署完成后，按照页面内置的“版本评审看板”“QA 实验室”逐条验证，确认所有角色反馈都已关闭，然后再向老板/运营汇报最终链接。
 
+### 离线发布包打包
+
+如果需要在无法直接推送代码的环境下，快速生成可上传的静态发布包，可使用随附脚本：
+
+```bash
+chmod +x tools/package-release.sh
+./tools/package-release.sh
+```
+
+脚本会自动安装依赖、执行 `npm run build`，并在 `release/` 目录生成带时间戳的 ZIP 文件（例如 `release/startrail-release-20240201T120000Z.zip`）。将该压缩包拷贝到联网机器，解压后即可：
+
+1. 在任意支持静态托管的平台上传整包文件（Vercel、GitHub Pages、自建 Nginx/CDN 等）；
+2. 或者与团队成员共享压缩包，由他们在本地运行 `npm run preview` / `npx serve dist` 进行复测；
+3. 上传完成后，将生成的公网链接回填到评审看板或团队文档，供所有角色验收。
+
 > ℹ️ 由于当前环境无法直接访问外网或登陆 GitHub/Vercel，上述步骤需要在本地或自己的云端环境执行。完成后即可得到一个可分享的线上地址。
 
 ### 当前交付状态说明
