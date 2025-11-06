@@ -73,21 +73,30 @@ docker run -it --rm -p 8080:80 nebula-expedition
 
 若希望通过 Vercel 获得自动化预览与正式环境，可按以下步骤完成整个闭环：
 
-1. **准备 GitHub 仓库**：在自己的 GitHub 账号（如 `coyi1234567`）下新建一个公开或私有仓库，例如 `nebula-expedition`。将本项目代码推送到该仓库：
+1. **在当前环境导出 Git Bundle**：
 
    ```bash
-   git init
-   git remote add origin git@github.com:<your-account>/nebula-expedition.git
-   git add .
-   git commit -m "Initial commit"
-   git push -u origin main
+   npm install
+   npm run build
+   ./tools/github-export.sh
    ```
 
-   如使用 GitHub Codespaces / Desktop，可在图形界面完成同样操作，确保主分支包含本仓库文件。
+   导出脚本会在 `sync-output/` 生成 `coyi-codex.bundle`，包含当前分支的完整 Git 历史。下载该文件至有网络的机器，再继续后续操作。
 
-2. **在 Vercel 导入项目**：访问 [Vercel Dashboard](https://vercel.com/dashboard)，点击 **Add New → Project**，选择刚刚推送的 GitHub 仓库。如果提示授权，授予 Vercel 访问该仓库的权限。
+2. **准备 GitHub 仓库**：在自己的 GitHub 账号（如 `coyi1234567`）下新建一个公开或私有仓库，例如 `nebula-expedition`。然后在可联网环境执行：
 
-3. **确认构建设置**：Vercel 会自动识别 `package.json`。若没有自动填充，请手动设置：
+   ```bash
+   git clone /path/to/coyi-codex.bundle nebula-expedition
+   cd nebula-expedition
+   git remote add origin git@github.com:<your-account>/nebula-expedition.git
+   git push -u origin HEAD:main
+   ```
+
+   如使用 GitHub Codespaces / Desktop，可在图形界面完成同样操作，确保主分支包含本仓库文件。完成推送后，可将仓库设置为 Public 或邀请团队成员加入。
+
+3. **在 Vercel 导入项目**：访问 [Vercel Dashboard](https://vercel.com/dashboard)，点击 **Add New → Project**，选择刚刚推送的 GitHub 仓库。如果提示授权，授予 Vercel 访问该仓库的权限。
+
+4. **确认构建设置**：Vercel 会自动识别 `package.json`。若没有自动填充，请手动设置：
 
    - *Framework Preset*: `Other`
    - *Build Command*: `npm run build`
@@ -95,21 +104,21 @@ docker run -it --rm -p 8080:80 nebula-expedition
 
    项目根目录中的 [`vercel.json`](vercel.json) 已声明构建产物目录与单页应用路由，无需额外配置。
 
-4. **首次部署与验证**：点击 **Deploy**，Vercel 会自动执行 `npm install` 与构建流程，并将 `dist/` 上传为静态站点。构建完成后即可获得一个形如 `https://nebula-expedition.vercel.app` 的临时域名。进入链接即可验证是否可在移动端正常游玩。
+5. **首次部署与验证**：点击 **Deploy**，Vercel 会自动执行 `npm install` 与构建流程，并将 `dist/` 上传为静态站点。构建完成后即可获得一个形如 `https://nebula-expedition.vercel.app` 的临时域名。进入链接即可验证是否可在移动端正常游玩。
 
-5. **多版本验证**：后续在 GitHub 推送新 commit，Vercel 会：
+6. **多版本验证**：后续在 GitHub 推送新 commit，Vercel 会：
 
    - 为每个 Pull Request 生成 Preview 链接，供产品经理、玩家等角色评审；
    - 自动更新 Production 环境（默认为 `main` 分支），并保留历史构建记录，便于回滚。
 
-6. **自测清单**：部署完成后，按照页面内置的“版本评审看板”“QA 实验室”逐条验证，确认所有角色反馈都已关闭，然后再向老板/运营汇报最终链接。
+7. **自测清单**：部署完成后，按照页面内置的“版本评审看板”“QA 实验室”逐条验证，确认所有角色反馈都已关闭，然后再向老板/运营汇报最终链接。
 
 > ℹ️ 由于当前环境无法直接访问外网或登陆 GitHub/Vercel，上述步骤需要在本地或自己的云端环境执行。完成后即可得到一个可分享的线上地址。
 
 ### 当前交付状态说明
 
 - **代码**：此仓库已包含可以直接 `npm run build` 的完整源码，`dist/` 目录即为对外发版资源。
-- **GitHub 仓库**：本环境无法推送到 `https://github.com/coyi1234567` 或新建远端仓库，请在本地执行 README 提供的 `git remote add origin` 与 `git push` 步骤完成同步。
+- **GitHub 仓库**：本环境无法推送到 `https://github.com/coyi1234567` 或新建远端仓库。已提供 `./tools/github-export.sh` 生成的离线包流程，请在有网络的环境运行 README 中的 `git push` 步骤完成同步。
 - **线上部署**：由于无法访问外部平台，暂未产生可直接游玩的公网链接。请在具备网络权限的机器上登录 Vercel（或任意静态托管平台），导入刚同步的 GitHub 仓库后即可自动获得线上地址。
 - **自测结果**：可通过 `npm run preview` 在本地验证生产包，或使用提供的 Docker 镜像启动服务，确保所有角色反馈闭环再上线。
 
